@@ -10,7 +10,7 @@ from desloppify.base.discovery.paths import get_project_root
 
 # Bump this integer whenever docs/SKILL.md changes in a way that agents
 # should pick up (new commands, changed workflows, removed sections).
-SKILL_VERSION = 6
+SKILL_VERSION = 7
 
 SKILL_VERSION_RE = re.compile(r"<!--\s*desloppify-skill-version:\s*(\d+)\s*-->")
 SKILL_OVERLAY_RE = re.compile(r"<!--\s*desloppify-overlay:\s*(\w+)\s*-->")
@@ -25,6 +25,7 @@ SKILL_SEARCH_PATHS = (
     ".claude/skills/desloppify/SKILL.md",
     ".opencode/skills/desloppify/SKILL.md",
     ".qwen/skills/desloppify/SKILL.md",
+    ".rovodev/skills/desloppify/SKILL.md",
     "AGENTS.md",
     "CLAUDE.md",
     ".cursor/rules/desloppify.md",
@@ -43,6 +44,7 @@ SKILL_TARGETS: dict[str, tuple[str, str, bool]] = {
     "cursor": (".cursor/rules/desloppify.md", "CURSOR", True),
     "copilot": (".github/copilot-instructions.md", "COPILOT", False),
     "droid": (".factory/skills/desloppify/SKILL.md", "DROID", True),
+    "rovodev": (".rovodev/skills/desloppify/SKILL.md", "ROVODEV", True),
     "windsurf": ("AGENTS.md", "WINDSURF", False),
     "gemini": ("AGENTS.md", "GEMINI", False),
     "hermes": ("AGENTS.md", "HERMES", False),
@@ -59,6 +61,7 @@ SKILL_TARGETS: dict[str, tuple[str, str, bool]] = {
 #   amp:      ampcode.com/news/agent-skills
 #   opencode: opencode.ai/docs/skills/
 #   qwen:     qwenlm.github.io/qwen-code-docs/en/users/features/skills/
+#   rovodev:  support.atlassian.com/rovo/docs/extend-rovo-dev-cli-with-agent-skills/
 #
 # Cursor is excluded — global rules are UI-only (cursor.com/docs/rules).
 GLOBAL_TARGETS: dict[str, tuple[str, str, str, bool]] = {
@@ -73,6 +76,12 @@ GLOBAL_TARGETS: dict[str, tuple[str, str, str, bool]] = {
         True,
     ),
     "qwen": (".qwen/skills/desloppify/SKILL.md", "QWEN", ".qwen", True),
+    "rovodev": (
+        ".rovodev/skills/desloppify/SKILL.md",
+        "ROVODEV",
+        ".rovodev",
+        True,
+    ),
 }
 
 
