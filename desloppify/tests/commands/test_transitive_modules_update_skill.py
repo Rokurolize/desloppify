@@ -113,6 +113,18 @@ class TestResolveInterface:
         result = resolve_interface(None, install=install)
         assert result == "opencode"
 
+    def test_from_install_path_match_qwen(self):
+        from desloppify.app.skill_docs import SkillInstall
+
+        install = SkillInstall(
+            rel_path=".qwen/skills/desloppify/SKILL.md",
+            version=1,
+            overlay=None,
+            stale=False,
+        )
+        result = resolve_interface(None, install=install)
+        assert result == "qwen"
+
     def test_from_install_no_match(self):
         from desloppify.app.skill_docs import SkillInstall
         install = SkillInstall(

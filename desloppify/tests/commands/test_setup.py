@@ -24,6 +24,8 @@ def test_setup_parser_and_registry_are_wired() -> None:
     args = parser.parse_args(["setup", "--interface", "claude"])
     assert args.command == "setup"
     assert args.interface == "claude"
+    qwen_args = parser.parse_args(["setup", "--interface", "qwen"])
+    assert qwen_args.interface == "qwen"
 
     handlers = registry_mod.get_command_handlers()
     assert handlers["setup"] is setup_cmd_mod.cmd_setup
@@ -38,6 +40,7 @@ def test_global_install_writes_supported_targets(
     (tmp_path / ".gemini").mkdir()
     (tmp_path / ".config" / "agents").mkdir(parents=True)
     (tmp_path / ".config" / "opencode").mkdir(parents=True)
+    (tmp_path / ".qwen").mkdir()
     monkeypatch.setattr(Path, "home", lambda: tmp_path)
 
     setup_cmd_mod.cmd_setup(_setup_args())
@@ -45,13 +48,18 @@ def test_global_install_writes_supported_targets(
     claude_target = tmp_path / ".claude" / "skills" / "desloppify" / "SKILL.md"
     codex_target = tmp_path / ".codex" / "AGENTS.md"
     gemini_target = tmp_path / ".gemini" / "skills" / "desloppify" / "SKILL.md"
+    qwen_target = tmp_path / ".qwen" / "skills" / "desloppify" / "SKILL.md"
     assert claude_target.is_file()
     assert codex_target.is_file()
     assert gemini_target.is_file()
+    assert qwen_target.is_file()
     assert "desloppify-skill-version" in claude_target.read_text(encoding="utf-8")
     assert "<!-- desloppify-overlay: claude -->" in claude_target.read_text(encoding="utf-8")
     assert "<!-- desloppify-overlay: codex -->" in codex_target.read_text(encoding="utf-8")
     assert "<!-- desloppify-overlay: gemini -->" in gemini_target.read_text(encoding="utf-8")
+    qwen_content = qwen_target.read_text(encoding="utf-8")
+    assert qwen_content.startswith("---\n")
+    assert "<!-- desloppify-overlay: qwen -->" in qwen_content
 
 
 def test_global_single_interface_installs_only_requested_target(

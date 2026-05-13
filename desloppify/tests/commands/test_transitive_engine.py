@@ -650,6 +650,14 @@ class TestLangsAndUpdateSkillParsers:
         args = parser.parse_args(["update-skill", "opencode"])
         assert args.interface == "opencode"
 
+    def test_update_skill_parser_with_qwen_interface(self):
+        parser = argparse.ArgumentParser()
+        sub = parser.add_subparsers(dest="command")
+        parser_admin_mod._add_update_skill_parser(sub)
+
+        args = parser.parse_args(["update-skill", "qwen"])
+        assert args.interface == "qwen"
+
 
 # =====================================================================
 # Module 4: move_apply.py
