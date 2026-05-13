@@ -687,6 +687,24 @@ class TestLangsCommand:
         assert "(auto-fix)" not in labels
 
 
+class TestJavaPmdCommand:
+    def test_java_pmd_command_defaults_to_single_main_thread(self):
+        from desloppify.languages.java import PMD_COMMAND
+
+        assert "--threads 0" in PMD_COMMAND
+
+    def test_java_pmd_thread_arg_accepts_pmd_core_relative_values(self):
+        from desloppify.languages.java import _pmd_threads_arg
+
+        assert _pmd_threads_arg("2") == "--threads 2"
+        assert _pmd_threads_arg("0.5C") == "--threads 0.5C"
+
+    def test_java_pmd_thread_arg_falls_back_for_invalid_values(self):
+        from desloppify.languages.java import _pmd_threads_arg
+
+        assert _pmd_threads_arg("$(rm -rf /)") == "--threads 0"
+
+
 # ── Dynamic registration tests ──────────────────────────
 
 
