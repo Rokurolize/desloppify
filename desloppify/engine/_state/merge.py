@@ -203,6 +203,9 @@ def merge_scan(
         if resolved_options.potentials is not None
         else None
     )
+    confirmed_detectors = set(current_by_detector)
+    if ran_detectors is not None:
+        confirmed_detectors.update(ran_detectors)
     suspect_detectors = find_suspect_detectors(
         existing,
         current_by_detector,
@@ -219,6 +222,7 @@ def merge_scan(
         exclude=resolved_options.exclude,
         project_root=resolved_options.project_root,
         zone_map=resolved_options.zone_map,
+        confirmed_detectors=confirmed_detectors,
     )
 
     # Mark subjective assessments stale when mechanical issues changed.

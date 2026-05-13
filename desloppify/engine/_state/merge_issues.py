@@ -85,14 +85,14 @@ def verify_disappeared(
     exclude: tuple[str, ...] = (),
     project_root: str | None = None,
     zone_map=None,
+    confirmed_detectors: set[str] | None = None,
 ) -> tuple[int, int, int, set[str]]:
     """Update scan corroboration for issues absent from scan.
 
     Returns (resolved_count, skipped_other_lang, resolved_out_of_scope, changed_detectors).
-    Queue-tracked work stays user-controlled: disappearing from scan does not
-    change an open issue to resolved — *unless* the source file no longer exists
-    on disk, in which case the issue is auto-resolved.  Manually resolved items
-    can be marked as scan-verified when they remain absent.
+    Queue-tracked work stays user-controlled unless the detector is known to
+    have run in the current scan or the source file no longer exists. Manually
+    resolved items can be marked as scan-verified when they remain absent.
     """
     resolved = skipped_other_lang = resolved_out_of_scope = 0
     resolved_detectors: set[str] = set()
@@ -159,13 +159,20 @@ def verify_disappeared(
                 resolved_detectors.add(detector or "unknown")
                 resolved += 1
                 continue
-            if not file_deleted:
+            if file_deleted:
+                previous["status"] = "auto_resolved"
+                previous["resolved_at"] = now
+                previous["note"] = "Auto-resolved: source file no longer exists"
+                resolved_detectors.add(previous.get("detector", "unknown"))
+                resolved += 1
                 continue
-            previous["status"] = "auto_resolved"
-            previous["resolved_at"] = now
-            previous["note"] = "Auto-resolved: source file no longer exists"
-            resolved_detectors.add(previous.get("detector", "unknown"))
-            resolved += 1
+            if detector and confirmed_detectors is not None and detector in confirmed_detectors:
+                previous["status"] = "auto_resolved"
+                previous["resolved_at"] = now
+                previous["note"] = "Auto-resolved: absent from latest detector output"
+                resolved_detectors.add(detector)
+                resolved += 1
+                continue
             continue
 
         verification_note = (
