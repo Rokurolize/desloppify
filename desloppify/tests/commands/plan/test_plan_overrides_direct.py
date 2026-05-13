@@ -588,6 +588,60 @@ def test_plan_promote_moves_backlog_items_into_queue(monkeypatch, capsys) -> Non
     assert plan["promoted_ids"] == ["unused::a"]
 
 
+def test_plan_promote_filters_resolved_cluster_members(monkeypatch, capsys) -> None:
+    plan = {
+        "queue_order": [],
+        "clusters": {"cluster-a": {"issue_ids": ["fixed::a", "unused::b"]}},
+    }
+    runtime = SimpleNamespace(
+        state={
+            "issues": {
+                "fixed::a": {"id": "fixed::a", "status": "fixed"},
+                "unused::b": {"id": "unused::b", "status": "open"},
+            }
+        }
+    )
+    saved: list[dict] = []
+
+    monkeypatch.setattr(reorder_handlers_mod, "command_runtime", lambda _args: runtime)
+    monkeypatch.setattr(reorder_handlers_mod, "require_issue_inventory", lambda _state: True)
+    monkeypatch.setattr(reorder_handlers_mod, "load_plan", lambda: plan)
+    monkeypatch.setattr(reorder_handlers_mod, "save_plan", lambda plan_obj: saved.append(plan_obj))
+    monkeypatch.setattr(reorder_handlers_mod, "append_log_entry", lambda *_a, **_k: None)
+
+    reorder_handlers_mod.cmd_plan_promote(
+        argparse.Namespace(patterns=["cluster-a"], position="top", target=None)
+    )
+    out = capsys.readouterr().out
+
+    assert "Promoted 1 item(s)" in out
+    assert plan["queue_order"] == ["unused::b"]
+    assert plan["promoted_ids"] == ["unused::b"]
+    assert saved == [plan]
+
+
+def test_plan_promote_noops_when_cluster_has_no_actionable_members(monkeypatch, capsys) -> None:
+    plan = {"queue_order": [], "clusters": {"cluster-a": {"issue_ids": ["fixed::a"]}}}
+    runtime = SimpleNamespace(
+        state={"issues": {"fixed::a": {"id": "fixed::a", "status": "fixed"}}}
+    )
+    saved: list[dict] = []
+
+    monkeypatch.setattr(reorder_handlers_mod, "command_runtime", lambda _args: runtime)
+    monkeypatch.setattr(reorder_handlers_mod, "require_issue_inventory", lambda _state: True)
+    monkeypatch.setattr(reorder_handlers_mod, "load_plan", lambda: plan)
+    monkeypatch.setattr(reorder_handlers_mod, "save_plan", lambda plan_obj: saved.append(plan_obj))
+
+    reorder_handlers_mod.cmd_plan_promote(
+        argparse.Namespace(patterns=["cluster-a"], position="top", target=None)
+    )
+    out = capsys.readouterr().out
+
+    assert "No matching actionable issues found" in out
+    assert plan["queue_order"] == []
+    assert saved == []
+
+
 def test_override_skip_helpers_and_commands(monkeypatch, capsys) -> None:
     monkeypatch.setattr(
         override_skip_mod, "skip_kind_requires_attestation", lambda _kind: True
