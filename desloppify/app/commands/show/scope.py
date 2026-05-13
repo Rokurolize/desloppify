@@ -15,6 +15,8 @@ from desloppify.engine._work_queue.core import (
     QueueBuildOptions,
     build_work_queue,
 )
+from desloppify.engine._work_queue.helpers import scope_matches
+from desloppify.engine._work_queue.ranking import build_issue_items
 
 
 @dataclass(frozen=True)
@@ -197,18 +199,55 @@ def load_matches(
     status_filter: str,
     chronic: bool,
 ) -> list[dict[str, Any]]:
-    """Load matching issues from the ranked queue."""
-    queue = build_work_queue(
+    """Load matching issues for an exploratory show query.
+
+    Unlike execution queues, show should surface persisted matching issues even
+    when a detector has a higher standalone confidence threshold.
+    """
+    issue_map = state.get("work_items") or state.get("issues", {})
+    if not isinstance(issue_map, dict) or not issue_map:
+        queue = build_work_queue(
+            state,
+            options=QueueBuildOptions(
+                count=None,
+                scope=scope,
+                status=status_filter,
+                include_subjective=False,
+                chronic=chronic,
+            ),
+        )
+        return [item for item in queue.get("items", []) if item.get("kind") == "issue"]
+    return build_issue_items(
         state,
-        options=QueueBuildOptions(
-            count=None,
-            scope=scope,
-            status=status_filter,
-            include_subjective=False,
-            chronic=chronic,
-        ),
+        scan_path=state.get("scan_path"),
+        status_filter=status_filter,
+        scope=scope,
+        chronic=chronic,
+        forced_ids=_matching_issue_ids_for_scope(state, scope),
     )
-    return [item for item in queue.get("items", []) if item.get("kind") == "issue"]
+
+
+def _matching_issue_ids_for_scope(
+    state: StateModel,
+    scope: str | None,
+) -> set[str]:
+    """Return persisted IDs matching a show scope, bypassing queue thresholds."""
+    issue_map = state.get("work_items") or state.get("issues", {})
+    if not isinstance(issue_map, dict):
+        return set()
+    if not scope:
+        return {issue_id for issue_id in issue_map if isinstance(issue_id, str)}
+
+    matched: set[str] = set()
+    for issue_id, issue in issue_map.items():
+        if not isinstance(issue_id, str) or not isinstance(issue, dict):
+            continue
+        item = dict(issue)
+        item["id"] = issue_id
+        item.setdefault("kind", "issue")
+        if scope_matches(item, scope):
+            matched.add(issue_id)
+    return matched
 
 
 def resolve_noise(
