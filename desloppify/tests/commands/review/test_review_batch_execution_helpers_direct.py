@@ -520,3 +520,46 @@ def test_build_batch_run_deps_keeps_codex_runner_default(tmp_path: Path) -> None
     )
 
     assert deps.run_batch_fn.func is orchestrator_mod.run_codex_batch
+
+
+def test_do_run_batches_uses_explicit_scan_path_as_runner_root(
+    monkeypatch, tmp_path: Path
+) -> None:
+    from desloppify.app.commands.review.runtime import policy as policy_mod
+
+    checkout_root = tmp_path / "checkout"
+    scan_root = checkout_root / "framerail"
+    scan_root.mkdir(parents=True)
+    captured: dict[str, Path] = {}
+    deps = object()
+
+    monkeypatch.setattr(orchestrator_mod, "_runtime_project_root", lambda: checkout_root)
+    monkeypatch.setattr(orchestrator_mod, "_subagent_runs_dir", lambda: tmp_path / "runs")
+    monkeypatch.setattr(policy_mod, "resolve_batch_run_policy", lambda _args: object())
+    monkeypatch.setattr(
+        orchestrator_mod,
+        "_build_batch_run_deps",
+        lambda *, project_root, **_kwargs: (
+            captured.update(deps_root=project_root) or deps
+        ),
+    )
+    monkeypatch.setattr(
+        orchestrator_mod.review_batch_phases_mod,
+        "prepare_batch_run",
+        lambda *, project_root, **_kwargs: (
+            captured.update(prepare_root=project_root) or None
+        ),
+    )
+
+    orchestrator_mod.do_run_batches(
+        SimpleNamespace(path=str(scan_root)),
+        {},
+        SimpleNamespace(name="typescript"),
+        tmp_path / "state.json",
+        config={},
+    )
+
+    assert captured == {
+        "deps_root": scan_root.resolve(),
+        "prepare_root": scan_root.resolve(),
+    }

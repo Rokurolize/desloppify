@@ -92,9 +92,9 @@ def resolve_detection_root(
     """Best root to auto-detect language from."""
     marker_provider = marker_provider or _lang_config_markers
     markers = marker_provider()
-    project_root_path = (
+    project_root_path = Path(
         project_root if project_root is not None else get_project_root()
-    )
+    ).resolve()
 
     raw_path = getattr(args, "path", None)
     if not raw_path:
@@ -109,11 +109,23 @@ def resolve_detection_root(
     for probe_root in (candidate_root, *candidate_root.parents):
         if any((probe_root / marker).exists() for marker in markers):
             return probe_root
+        if probe_root == project_root_path or (probe_root / ".git").exists():
+            break
     return candidate_root
 
 
 def auto_detect_lang_name(args: object) -> str | None:
     """Auto-detect language using the most relevant root for this command."""
+    state_value = getattr(args, "state", None)
+    if state_value:
+        state_file = Path(state_value)
+        state_parent = state_file.parent.name
+        if state_parent in lang_api.available_langs():
+            return state_parent
+        if state_file.name.startswith("state-") and state_file.suffix == ".json":
+            state_language = state_file.stem.removeprefix("state-")
+            if state_language in lang_api.available_langs():
+                return state_language
     root = resolve_detection_root(args)
     detected = lang_api.auto_detect_lang(root)
     if detected is None and root != get_project_root():

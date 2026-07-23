@@ -20,6 +20,7 @@ except ImportError:
     fcntl = None  # type: ignore[assignment]
 
 from desloppify.base.exception_sets import PLAN_LOAD_EXCEPTIONS
+
 __all__ = [
     "load_state",
     "save_state",
@@ -29,8 +30,7 @@ __all__ = [
 from desloppify.base.discovery.file_paths import safe_write_text
 from desloppify.base.text_utils import is_numeric
 from desloppify.engine._plan.persistence import load_plan as load_plan_state
-from desloppify.engine._plan.persistence import plan_path_for_state
-from desloppify.engine.plan_state import PlanLoadStatus
+from desloppify.engine._plan.persistence import resolve_plan_path_for_state
 from desloppify.engine._state.recovery import (
     has_saved_plan_without_scan,
     reconstruct_state_from_saved_plan,
@@ -45,6 +45,7 @@ from desloppify.engine._state.schema import (
     scan_source,
     validate_state_invariants,
 )
+from desloppify.engine.plan_state import PlanLoadStatus
 
 logger = logging.getLogger(__name__)
 
@@ -139,7 +140,7 @@ def _reconstruct_from_saved_plan_if_available(
 
 
 def _saved_plan_load_status(state_path: Path) -> PlanLoadStatus:
-    plan_path = plan_path_for_state(state_path)
+    plan_path = resolve_plan_path_for_state(state_path)
     if not plan_path.exists():
         return PlanLoadStatus(plan=None, degraded=False, error_kind=None)
     try:
@@ -160,7 +161,7 @@ def load_state(path: Path | None = None) -> StateModel:
     """Load state from disk, or return empty state on missing/corruption."""
     state_path = path or _default_state_file()
     if not state_path.exists():
-        plan_path = plan_path_for_state(state_path)
+        plan_path = resolve_plan_path_for_state(state_path)
         if plan_path.exists():
             print(
                 f"  ⚠ State file missing ({state_path.name}); attempting recovery from {plan_path.name}.",
@@ -301,7 +302,7 @@ def save_state(
     serialized_state = {
         key: value for key, value in state.items() if key != "issues"
     }
-    serialized_state["work_items"] = dict((state.get("work_items") or state.get("issues", {})))
+    serialized_state["work_items"] = dict(state.get("work_items") or state.get("issues", {}))
     content = json.dumps(serialized_state, indent=2, default=json_default) + "\n"
 
     if state_path.exists():

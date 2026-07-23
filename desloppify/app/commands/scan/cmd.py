@@ -7,13 +7,13 @@ import copy
 from pathlib import Path
 
 from desloppify.app.commands.helpers.by_language import detect_present_languages
+from desloppify.app.commands.helpers.command_runtime import command_runtime
 from desloppify.app.commands.helpers.lang import resolve_lang
 from desloppify.app.commands.helpers.query import query_file_path
 from desloppify.app.commands.helpers.runtime_options import (
     LangRuntimeOptionsError,
     print_lang_runtime_options_error,
 )
-from desloppify.base.config import target_strict_score_from_config
 from desloppify.app.commands.scan.artifacts import (
     build_scan_query_payload,
     emit_scorecard_badge,
@@ -46,8 +46,9 @@ from desloppify.app.commands.scan.workflow import (
     resolve_noise_snapshot,
     run_scan_generation,
 )
-from desloppify.base.exception_sets import CommandError
+from desloppify.base.config import target_strict_score_from_config
 from desloppify.base.discovery.paths import get_project_root
+from desloppify.base.exception_sets import CommandError
 from desloppify.base.output.terminal import colorize
 from desloppify.base.search.query import write_query
 
@@ -220,6 +221,9 @@ def _cmd_scan_by_language(args: argparse.Namespace) -> None:
         lang_args.by_language = False
         lang_args.lang = lang_name
         lang_args.state = None
+        if hasattr(lang_args, "runtime"):
+            del lang_args.runtime
+        lang_args.runtime = command_runtime(lang_args)
         cmd_scan(lang_args)
 
 
