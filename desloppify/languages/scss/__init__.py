@@ -8,11 +8,11 @@ generic_lang(
     tools=[
         {
             "label": "stylelint",
-            "cmd": "stylelint '**/*.scss' '**/*.sass' --formatter unix --max-warnings 1000",
+            "cmd": "npx --no-install stylelint '**/*.scss' '**/*.sass' --formatter unix --max-warnings 1000",
             "fmt": "gnu",
             "id": "stylelint_issue",
             "tier": 2,
-            "fix_cmd": "stylelint --fix '**/*.scss' '**/*.sass'",
+            "fix_cmd": "npx --no-install stylelint --fix '**/*.scss' '**/*.sass'",
         },
     ],
     exclude=["node_modules", "_output", ".quarto", "vendor"],

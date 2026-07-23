@@ -62,12 +62,16 @@ def test_exclusions(cfg):
     assert "dist" in cfg.exclusions
 
 
-def test_command_has_no_placeholder(cfg):
-    """The eslint command must not contain a {file_path} template placeholder.
+def test_command_is_scoped_to_javascript_extensions(cfg):
+    """The eslint command must not scan sibling TypeScript or framework files.
 
     run_tool_result() passes the command to resolve_command_argv() which does
     NOT perform string substitution — a leftover placeholder would be passed
     verbatim to the shell and produce zero results silently.
+
+    ESLint supports multiple languages in one project. Passing the project
+    directory would contaminate this language-specific state with diagnostics
+    from TypeScript and framework component files.
 
     Closure inspection is used so the test does not depend on string-matching
     the source code; it reads the *actual* value captured at registration time.
@@ -78,11 +82,15 @@ def test_command_has_no_placeholder(cfg):
     assert "{file_path}" not in cmd, (
         f"command contains {{file_path}} placeholder which will not be substituted: {cmd!r}"
     )
+    assert "eslint ." not in cmd
+    assert "**/*.{js,jsx,mjs,cjs}" in cmd
 
 
 def test_fix_cmd_registered(cfg):
     """JavaScript supports autofix — at least one fixer must be registered."""
-    assert cfg.fixers, "expected at least one fixer (fix_cmd) to be registered for JavaScript"
+    assert cfg.fixers, (
+        "expected at least one fixer (fix_cmd) to be registered for JavaScript"
+    )
 
 
 def test_parsing_eslint_format():
@@ -102,7 +110,9 @@ def test_parsing_eslint_format():
     )
     entries = parse_eslint(output, Path("."))
 
-    assert len(entries) == 2, f"expected 2 parsed entries, got {len(entries)}: {entries}"
+    assert len(entries) == 2, (
+        f"expected 2 parsed entries, got {len(entries)}: {entries}"
+    )
 
     assert entries[0]["file"] == "/project/src/app.js"
     assert entries[0]["line"] == 5

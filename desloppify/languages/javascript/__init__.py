@@ -7,18 +7,17 @@ from desloppify.languages._framework.treesitter import JS_SPEC
 from desloppify.languages.javascript import test_coverage as js_test_coverage
 from desloppify.languages.javascript._zones import JS_ZONE_RULES
 
-
 cfg = generic_lang(
     name="javascript",
     extensions=[".js", ".jsx", ".mjs", ".cjs"],
     tools=[
         {
             "label": "ESLint",
-            "cmd": "npx eslint . --format json --no-error-on-unmatched-pattern 2>/dev/null",
+            "cmd": "npx --no-install eslint '**/*.{js,jsx,mjs,cjs}' --format json --no-error-on-unmatched-pattern",
             "fmt": "eslint",
             "id": "eslint_warning",
             "tier": 2,
-            "fix_cmd": "npx eslint . --fix --no-error-on-unmatched-pattern 2>/dev/null",
+            "fix_cmd": "npx --no-install eslint '**/*.{js,jsx,mjs,cjs}' --fix --no-error-on-unmatched-pattern",
         },
     ],
     exclude=["node_modules", "dist", "build", ".next", "coverage"],
