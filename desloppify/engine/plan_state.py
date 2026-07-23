@@ -22,6 +22,7 @@ from desloppify.engine._plan.persistence import (
     plan_lock,
     plan_path_for_state,
     resolve_plan_load_status,
+    resolve_plan_path_for_state,
     save_plan,
 )
 from desloppify.engine._plan.policy.project import (
@@ -34,14 +35,14 @@ from desloppify.engine._plan.policy.project import (
     save_policy,
 )
 from desloppify.engine._plan.schema import (
-    ActionStep,
-    EpicTriageMeta,
     EPIC_PREFIX,
     PLAN_VERSION,
     VALID_EPIC_DIRECTIONS,
     VALID_SKIP_KINDS,
+    ActionStep,
     Cluster,
     CommitRecord,
+    EpicTriageMeta,
     ExecutionLogEntry,
     ItemOverride,
     PlanModel,
@@ -86,6 +87,7 @@ __all__ = [
     "load_policy_result",
     "plan_lock",
     "plan_path_for_state",
+    "resolve_plan_path_for_state",
     "purge_uncommitted_ids",
     "record_commit",
     "remove_rule",

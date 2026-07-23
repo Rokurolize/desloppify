@@ -11,16 +11,17 @@ from pathlib import Path
 from typing import Any
 
 from desloppify.app.cli_support.parser import create_parser as _create_parser
+from desloppify.app.commands.helpers.command_runtime import (
+    command_runtime,
+)
 from desloppify.app.commands.helpers.lang import resolve_lang
-from desloppify.app.commands.helpers.command_runtime import CommandRuntime
 from desloppify.app.commands.helpers.state import state_path
 from desloppify.app.commands.registry import CommandHandler, get_command_handlers
-from desloppify.base.config import load_config
+from desloppify.base.discovery.paths import get_default_scan_path, get_project_root
 from desloppify.base.discovery.source import set_exclusions
 from desloppify.base.exception_sets import CommandError
 from desloppify.base.output.fallbacks import log_best_effort_failure
 from desloppify.base.output.terminal import colorize
-from desloppify.base.discovery.paths import get_default_scan_path, get_project_root
 from desloppify.base.registry import detector_names, on_detector_registered
 from desloppify.base.runtime_state import runtime_scope
 from desloppify.languages import available_langs
@@ -114,12 +115,17 @@ def _project_root_from_state_path(state_path_value: str | Path | None) -> Path |
         state_file = Path(state_path_value).resolve()
     except OSError:
         return None
-    if state_file.parent.name != ".desloppify":
+    for parent in state_file.parents:
+        if parent.name != ".desloppify":
+            continue
+        relative = state_file.relative_to(parent)
+        if len(relative.parts) > 2:
+            return None
+        if state_file.name == "state.json" or (
+            state_file.name.startswith("state-") and state_file.suffix == ".json"
+        ):
+            return parent.parent
         return None
-    if state_file.name == "state.json" or (
-        state_file.name.startswith("state-") and state_file.suffix == ".json"
-    ):
-        return state_file.parent.parent
     return None
 
 
@@ -157,13 +163,8 @@ def _resolve_default_path(args: argparse.Namespace) -> None:
 
 def _load_shared_runtime(args: argparse.Namespace) -> None:
     """Load config/state and attach shared objects to parsed args."""
-    config = load_config()
-
-    state_file = state_path(args)
-    state = load_state(state_file)
-    _apply_persisted_exclusions(args, config)
-
-    args.runtime = CommandRuntime(config=config, state=state, state_path=state_file)
+    args.runtime = command_runtime(args)
+    _apply_persisted_exclusions(args, args.runtime.config)
 
 
 def _looks_like_desloppify_checkout(root: Path) -> bool:

@@ -13,9 +13,11 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import cast
 
-from desloppify.base.exception_sets import PLAN_LOAD_EXCEPTIONS
 from desloppify.base.discovery.file_paths import safe_write_text
+from desloppify.base.exception_sets import PLAN_LOAD_EXCEPTIONS
 from desloppify.base.output.fallbacks import log_best_effort_failure
+from desloppify.base.runtime_state import resolve_runtime_context
+from desloppify.engine._plan.refresh_lifecycle import migrate_legacy_phase
 from desloppify.engine._plan.schema import (
     PLAN_VERSION,
     PlanModel,
@@ -23,7 +25,6 @@ from desloppify.engine._plan.schema import (
     ensure_plan_defaults,
     validate_plan,
 )
-from desloppify.engine._plan.refresh_lifecycle import migrate_legacy_phase
 from desloppify.engine._state.schema import (
     get_state_dir,
     json_default,
@@ -49,6 +50,9 @@ class PlanLoadStatus:
 
 def get_plan_file() -> Path:
     """Return the default plan file for the current runtime context."""
+    runtime_plan_file = resolve_runtime_context().plan_file
+    if runtime_plan_file is not None:
+        return runtime_plan_file
     return get_state_dir() / "plan.json"
 
 
@@ -196,7 +200,48 @@ def save_plan(plan: PlanModel | dict, path: Path | None = None) -> None:
 
 def plan_path_for_state(state_path: Path) -> Path:
     """Derive plan.json path from a state file path."""
+    if state_path.name.startswith("state-") and state_path.suffix == ".json":
+        language = state_path.stem.removeprefix("state-")
+        if language:
+            return state_path.with_name(f"plan-{language}.json")
     return state_path.parent / "plan.json"
+
+
+def _legacy_plan_is_unambiguous(state_path: Path) -> bool:
+    """Return whether the old shared plan can only belong to this state."""
+    if not (state_path.name.startswith("state-") and state_path.suffix == ".json"):
+        return False
+    existing_states = {
+        candidate.resolve()
+        for candidate in state_path.parent.glob("state*.json")
+        if candidate.is_file()
+    }
+    return not existing_states or existing_states == {state_path.resolve()}
+
+
+def resolve_plan_path_for_state(
+    state_path: Path,
+    *,
+    migrate_legacy: bool = False,
+) -> Path:
+    """Resolve a state-specific plan path with safe legacy compatibility."""
+    plan_path = plan_path_for_state(state_path)
+    if plan_path.exists() or plan_path.name == "plan.json":
+        return plan_path
+
+    legacy_path = state_path.parent / "plan.json"
+    if not legacy_path.exists() or not _legacy_plan_is_unambiguous(state_path):
+        return plan_path
+    if not migrate_legacy:
+        return legacy_path
+
+    plan_path.parent.mkdir(parents=True, exist_ok=True)
+    try:
+        shutil.copy2(legacy_path, plan_path)
+    except OSError as exc:
+        log_best_effort_failure(logger, "migrate legacy language plan", exc)
+        return legacy_path
+    return plan_path
 
 
 def has_living_plan(path: Path | None = None) -> bool:
@@ -220,6 +265,7 @@ __all__ = [
     "load_plan",
     "plan_lock",
     "plan_path_for_state",
+    "resolve_plan_path_for_state",
     "resolve_plan_load_status",
     "save_plan",
 ]

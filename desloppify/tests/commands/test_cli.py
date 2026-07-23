@@ -17,8 +17,8 @@ from desloppify.app.commands.helpers.runtime_options import (
 )
 from desloppify.cli import (
     _get_detector_names,
-    _running_installed_package_from_checkout,
     _resolve_default_path,
+    _running_installed_package_from_checkout,
     _warn_if_running_installed_package_from_checkout,
     create_parser,
     state_path,
@@ -782,6 +782,32 @@ class TestResolveLang:
         assert lang is not None
         assert lang.name == "python"
 
+    @pytest.mark.parametrize(
+        "state_path",
+        [
+            ".desloppify/typescript/state.json",
+            ".desloppify/state-typescript.json",
+        ],
+    )
+    def test_explicit_state_path_selects_its_language(
+        self, tmp_path, monkeypatch, state_path
+    ):
+        project_root = tmp_path / "project"
+        project_root.mkdir()
+        (project_root / "main.py").write_text("print('python')\n")
+        monkeypatch.setattr(lang_helpers_mod, "get_project_root", lambda: project_root)
+
+        args = SimpleNamespace(
+            lang=None,
+            path=str(project_root),
+            state=str(project_root / state_path),
+        )
+
+        lang = resolve_lang(args)
+
+        assert lang is not None
+        assert lang.name == "typescript"
+
     def test_auto_detect_uses_path_when_it_looks_like_project_root(
         self, tmp_path, monkeypatch
     ):
@@ -992,6 +1018,15 @@ class TestProjectRootFromStatePath:
         from desloppify.cli import _project_root_from_state_path
 
         assert _project_root_from_state_path(str(sf)) == tmp_path
+
+    def test_nested_language_state_file(self, tmp_path: Path):
+        state_dir = tmp_path / ".desloppify" / "typescript"
+        state_dir.mkdir(parents=True)
+        state_file = state_dir / "state.json"
+        state_file.write_text("{}")
+        from desloppify.cli import _project_root_from_state_path
+
+        assert _project_root_from_state_path(str(state_file)) == tmp_path
 
     def test_none_input(self):
         from desloppify.cli import _project_root_from_state_path

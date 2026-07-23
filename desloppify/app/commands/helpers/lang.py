@@ -116,6 +116,16 @@ def resolve_detection_root(
 
 def auto_detect_lang_name(args: object) -> str | None:
     """Auto-detect language using the most relevant root for this command."""
+    state_value = getattr(args, "state", None)
+    if state_value:
+        state_file = Path(state_value)
+        state_parent = state_file.parent.name
+        if state_parent in lang_api.available_langs():
+            return state_parent
+        if state_file.name.startswith("state-") and state_file.suffix == ".json":
+            state_language = state_file.stem.removeprefix("state-")
+            if state_language in lang_api.available_langs():
+                return state_language
     root = resolve_detection_root(args)
     detected = lang_api.auto_detect_lang(root)
     if detected is None and root != get_project_root():

@@ -8,21 +8,21 @@ import desloppify.app.commands.scan.artifacts as scan_artifacts_mod
 import desloppify.app.commands.scan.cmd as scan_cmd_mod
 import desloppify.app.commands.scan.preflight as scan_preflight_mod
 import desloppify.languages as lang_mod
-from desloppify.app.commands.scan.helpers import (
-    audit_excluded_dirs,
-    collect_codebase_metrics,
-    effective_include_slow,
-    resolve_scan_profile,
-    warn_explicit_lang_with_no_files,
-    format_delta,
-)
-from desloppify.app.commands.scan.reporting.summary import (
-    show_strict_target_progress,
-)
 from desloppify.app.commands.scan.cmd import (
     cmd_scan,
     show_diff_summary,
     show_score_delta,
+)
+from desloppify.app.commands.scan.helpers import (
+    audit_excluded_dirs,
+    collect_codebase_metrics,
+    effective_include_slow,
+    format_delta,
+    resolve_scan_profile,
+    warn_explicit_lang_with_no_files,
+)
+from desloppify.app.commands.scan.reporting.summary import (
+    show_strict_target_progress,
 )
 from desloppify.base.exception_sets import CommandError
 
@@ -139,21 +139,32 @@ class TestCmdScanExecution:
         assert captured["llm_summary_called"] is True
 
     def test_cmd_scan_by_language_runs_each_detected_language(self, monkeypatch):
-        calls: list[str] = []
+        calls: list[tuple[str, str]] = []
 
         monkeypatch.setattr(scan_cmd_mod, "detect_present_languages", lambda _path: ["python", "rust"])
+        monkeypatch.setattr(
+            scan_cmd_mod,
+            "command_runtime",
+            lambda args: SimpleNamespace(language=args.lang),
+        )
 
         def _single_scan(args):
-            calls.append(args.lang)
+            calls.append((args.lang, args.runtime.language))
 
         monkeypatch.setattr(scan_cmd_mod, "_cmd_scan_by_language", scan_cmd_mod._cmd_scan_by_language)
         monkeypatch.setattr(scan_cmd_mod, "cmd_scan", _single_scan)
 
         scan_cmd_mod._cmd_scan_by_language(
-            SimpleNamespace(path=".", by_language=True, lang=None, state="custom.json")
+            SimpleNamespace(
+                path=".",
+                by_language=True,
+                lang=None,
+                state="custom.json",
+                runtime=SimpleNamespace(language="stale"),
+            )
         )
 
-        assert calls == ["python", "rust"]
+        assert calls == [("python", "python"), ("rust", "rust")]
 
     def test_cmd_scan_prints_coverage_preflight_warning(self, monkeypatch, capsys):
         monkeypatch.setattr(scan_preflight_mod, "scan_queue_preflight", lambda _: None)
