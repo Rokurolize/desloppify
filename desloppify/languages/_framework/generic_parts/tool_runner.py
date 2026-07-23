@@ -49,7 +49,10 @@ def resolve_command_argv(cmd: str) -> list[str]:
     except ValueError:
         return _shell_argv(cmd)
     if os.name == "nt":
-        argv = [arg[1:-1] if len(arg) >= 2 and arg[0] == arg[-1] == '"' else arg for arg in argv]
+        argv = [
+            arg[1:-1] if len(arg) >= 2 and arg[0] == arg[-1] == '"' else arg
+            for arg in argv
+        ]
     return argv if argv else _shell_argv(cmd)
 
 
@@ -162,7 +165,10 @@ def run_tool_result(
             returncode=result.returncode,
         )
     if not parsed_entries:
-        if result.returncode not in (0, None):
+        allow_empty_nonzero = bool(
+            isinstance(meta, dict) and meta.get("allow_empty_nonzero")
+        )
+        if result.returncode not in (0, None) and not allow_empty_nonzero:
             preview = _output_preview(combined)
             return ToolRunResult(
                 entries=[],

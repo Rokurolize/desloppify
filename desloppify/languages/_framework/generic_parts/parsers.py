@@ -85,7 +85,9 @@ def parse_json(output: str, scan_path: Path) -> list[dict]:
         if not isinstance(item, dict):
             continue
         filename = item.get("file") or item.get("filename") or item.get("path") or ""
-        line = _coerce_line(item.get("line") or item.get("line_no") or item.get("row") or 0)
+        line = _coerce_line(
+            item.get("line") or item.get("line_no") or item.get("row") or 0
+        )
         message = item.get("message") or item.get("text") or item.get("reason") or ""
         if filename and message and line is not None:
             entries.append(
@@ -111,7 +113,9 @@ def parse_rubocop(output: str, scan_path: Path) -> list[dict]:
             line = _coerce_line(loc.get("line", 0))
             message = offense.get("message", "")
             if filepath and message and line is not None:
-                entries.append({"file": str(filepath), "line": line, "message": str(message)})
+                entries.append(
+                    {"file": str(filepath), "line": line, "message": str(message)}
+                )
     return entries
 
 
@@ -160,7 +164,9 @@ def parse_credo(output: str, scan_path: Path) -> list[dict]:
         if check:
             message = f"{message} ({check})"
         if filename and message and line is not None:
-            entries.append({"file": str(filename), "line": line, "message": str(message)})
+            entries.append(
+                {"file": str(filename), "line": line, "message": str(message)}
+            )
     return entries
 
 
@@ -177,8 +183,54 @@ def parse_eslint(output: str, scan_path: Path) -> list[dict]:
             line = _coerce_line(msg.get("line", 0))
             message = msg.get("message", "")
             if filepath and message and line is not None:
-                entries.append({"file": str(filepath), "line": line, "message": str(message)})
+                entries.append(
+                    {"file": str(filepath), "line": line, "message": str(message)}
+                )
     return entries
+
+
+_SVELTE_CHECK_DIAGNOSTIC_RE = re.compile(
+    r'^\d+\s+(ERROR|WARNING)\s+("(?:[^"\\]|\\.)*")\s+'
+    r'(\d+):(\d+)\s+("(?:[^"\\]|\\.)*")\s*$'
+)
+_SVELTE_CHECK_CONTROL_RE = re.compile(r"^\d+\s+(?:START|COMPLETED)\b")
+
+
+def parse_svelte_check(output: str, scan_path: Path) -> tuple[list[dict], dict]:
+    """Parse svelte-check machine output and retain only component diagnostics."""
+    del scan_path
+    entries: list[dict] = []
+    recognized = False
+    for line in output.splitlines():
+        if _SVELTE_CHECK_CONTROL_RE.match(line):
+            recognized = True
+            continue
+        match = _SVELTE_CHECK_DIAGNOSTIC_RE.match(line)
+        if match is None:
+            continue
+        recognized = True
+        try:
+            filepath = json.loads(match.group(2))
+            message = json.loads(match.group(5))
+        except (json.JSONDecodeError, ValueError) as exc:
+            raise ToolParserError(
+                "svelte_check parser could not decode quoted fields"
+            ) from exc
+        if Path(filepath).suffix.lower() != ".svelte":
+            continue
+        entries.append(
+            {
+                "file": str(filepath),
+                "line": int(match.group(3)),
+                "message": f"[{match.group(1).lower()}] {message}",
+            }
+        )
+    if not recognized:
+        raise ToolParserError("svelte_check parser found no machine-output records")
+    return entries, {
+        "potential": len(entries),
+        "allow_empty_nonzero": True,
+    }
 
 
 def parse_phpstan(output: str, scan_path: Path) -> list[dict]:
@@ -196,7 +248,9 @@ def parse_phpstan(output: str, scan_path: Path) -> list[dict]:
             line = _coerce_line(msg.get("line", 0))
             message = msg.get("message", "")
             if filepath and message and line is not None:
-                entries.append({"file": str(filepath), "line": line, "message": str(message)})
+                entries.append(
+                    {"file": str(filepath), "line": line, "message": str(message)}
+                )
     return entries
 
 
@@ -258,7 +312,11 @@ def parse_next_lint(output: str, scan_path: Path) -> tuple[list[dict], dict]:
         if first is None:
             continue
         line = _coerce_line(first.get("line", 0)) or 1
-        msg = first.get("message") if isinstance(first.get("message"), str) else "Lint issue"
+        msg = (
+            first.get("message")
+            if isinstance(first.get("message"), str)
+            else "Lint issue"
+        )
         entries.append(
             {
                 "file": rel,
@@ -271,8 +329,12 @@ def parse_next_lint(output: str, scan_path: Path) -> tuple[list[dict], dict]:
                         {
                             "line": _coerce_line(m.get("line", 0)) or 0,
                             "column": _coerce_line(m.get("column", 0)) or 0,
-                            "ruleId": m.get("ruleId", "") if isinstance(m.get("ruleId", ""), str) else "",
-                            "message": m.get("message", "") if isinstance(m.get("message", ""), str) else "",
+                            "ruleId": m.get("ruleId", "")
+                            if isinstance(m.get("ruleId", ""), str)
+                            else "",
+                            "message": m.get("message", "")
+                            if isinstance(m.get("message", ""), str)
+                            else "",
                             "severity": _coerce_line(m.get("severity", 0)) or 0,
                         }
                         for m in messages
@@ -315,6 +377,7 @@ PARSERS: dict[str, ToolParser] = {
     "rubocop": parse_rubocop,
     "cargo": parse_cargo,
     "eslint": parse_eslint,
+    "svelte_check": parse_svelte_check,
     "next_lint": parse_next_lint,
     "air": parse_air,
 }
@@ -335,4 +398,5 @@ __all__ = [
     "parse_phpstan",
     "parse_next_lint",
     "parse_rubocop",
+    "parse_svelte_check",
 ]
