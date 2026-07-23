@@ -5,6 +5,7 @@ from __future__ import annotations
 import logging
 
 from desloppify.app.commands.helpers.lang import load_lang_config
+
 from .parser_groups_admin_review import _add_review_parser  # noqa: F401 (re-export)
 
 logger = logging.getLogger(__name__)
@@ -189,14 +190,14 @@ def _add_langs_parser(sub) -> None:
 def _add_update_skill_parser(sub) -> None:
     p = sub.add_parser(
         "update-skill",
-        help="Install or update the desloppify skill/agent document",
+        help="Install the bundled desloppify skill/agent document",
     )
     p.add_argument(
         "interface",
         nargs="?",
         default=None,
         help="Agent interface (amp, claude, codex, cursor, copilot, windsurf, gemini, hermes, droid, opencode, qwen, rovodev). "
-        "Auto-detected on updates if omitted.",
+        "Inferred from an existing install if omitted.",
     )
 
 

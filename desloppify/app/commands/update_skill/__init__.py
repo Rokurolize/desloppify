@@ -13,8 +13,9 @@ SKILL_VERSION = _cmd.SKILL_VERSION
 SKILL_VERSION_RE = _cmd.SKILL_VERSION_RE
 SkillInstall = _cmd.SkillInstall
 
-_RAW_BASE = _cmd._RAW_BASE
+_RESOURCE_PACKAGE = _cmd._RESOURCE_PACKAGE
 _FRONTMATTER_FIRST_INTERFACES = _cmd._FRONTMATTER_FIRST_INTERFACES
+_read_bundled_document = _cmd._read_bundled_document
 _download = _cmd._download
 _build_section = _cmd._build_section
 _ensure_frontmatter_first = _cmd._ensure_frontmatter_first
@@ -40,10 +41,10 @@ def resolve_interface(
 
 
 def update_installed_skill(interface: str) -> bool:
-    """Download and install the skill document for the given interface."""
+    """Install the bundled skill document for the given interface."""
     return _cmd._update_installed_skill_with_deps(
         interface,
-        download_fn=_download,
+        read_document_fn=_download,
         get_project_root_fn=get_project_root,
         safe_write_text_fn=safe_write_text,
         colorize_fn=colorize,
@@ -51,7 +52,7 @@ def update_installed_skill(interface: str) -> bool:
 
 
 def cmd_update_skill(args: argparse.Namespace) -> None:
-    """Install or update the desloppify skill document."""
+    """Install the bundled desloppify skill document."""
     _cmd._run_cmd_update_skill(
         args,
         resolve_interface_fn=resolve_interface,
@@ -68,10 +69,11 @@ __all__ = [
     "SKILL_VERSION_RE",
     "SkillInstall",
     "_FRONTMATTER_FIRST_INTERFACES",
-    "_RAW_BASE",
+    "_RESOURCE_PACKAGE",
     "_build_section",
     "_download",
     "_ensure_frontmatter_first",
+    "_read_bundled_document",
     "_replace_section",
     "cmd_update_skill",
     "colorize",

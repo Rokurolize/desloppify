@@ -5,7 +5,18 @@ from __future__ import annotations
 import argparse
 from pathlib import Path
 
+import pytest
+
 import desloppify.app.commands.update_skill.cmd as update_skill_cmd_mod
+
+
+def test_read_bundled_skill_document() -> None:
+    skill_content = update_skill_cmd_mod._read_bundled_document("SKILL.md")
+
+    assert "desloppify-skill-version" in skill_content
+    assert update_skill_cmd_mod._download is update_skill_cmd_mod._read_bundled_document
+    with pytest.raises(FileNotFoundError):
+        update_skill_cmd_mod._read_bundled_document("DOES_NOT_EXIST.md")
 
 
 def test_update_skill_helper_functions_cover_frontmatter_resolution_and_replace() -> None:
@@ -54,7 +65,7 @@ def test_resolve_interface_prefers_explicit_then_install_metadata(monkeypatch) -
     assert update_skill_cmd_mod.resolve_interface() == "cursor"
 
 
-def test_update_installed_skill_handles_download_and_shared_file_write(
+def test_update_installed_skill_handles_bundled_content_and_shared_file_write(
     monkeypatch,
     tmp_path: Path,
     capsys,

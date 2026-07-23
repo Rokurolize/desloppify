@@ -8,7 +8,7 @@ description: >
 ---
 
 <!-- desloppify-begin -->
-<!-- desloppify-skill-version: 7 -->
+<!-- desloppify-skill-version: 8 -->
 
 # Desloppify
 
@@ -247,18 +247,20 @@ desloppify config show                            # show all config including ex
 desloppify scan --path . --reset-subjective       # reset subjective baseline to 0
 ```
 
-## 4. Fix Tool Issues Upstream
+## 4. Fix Tool Issues In The Installed Fork
 
 When desloppify itself appears wrong or inconsistent — a bug, a bad detection, a crash, confusing output — **fix it and open a PR**. If you can't confidently fix it, file an issue instead.
 
 ### Fix and PR (preferred)
 
-Clone the tool repo to a temp directory, make the fix there, and verify it works against the project you're scanning before pushing.
+Use an isolated worktree from the installed `Rokurolize/desloppify` clone, and verify the fix against the project you're scanning before pushing. Do not clone `peteromallet/desloppify`, use `uvx` to fetch it, or install the PyPI package.
 
 ```bash
-git clone https://github.com/peteromallet/desloppify.git /tmp/desloppify-fix
-cd /tmp/desloppify-fix
-git checkout -b fix/<short-description>
+DESLOPPIFY_REPO="${DESLOPPIFY_REPO:-$HOME/src/Rokurolize/desloppify}"
+DESLOPPIFY_WORKTREE="${DESLOPPIFY_REPO}-worktrees/fix-<short-description>"
+git -C "$DESLOPPIFY_REPO" fetch origin main
+git -C "$DESLOPPIFY_REPO" worktree add -b fix/<short-description> "$DESLOPPIFY_WORKTREE" origin/main
+cd "$DESLOPPIFY_WORKTREE"
 ```
 
 Make your changes, then run the test suite and verify the fix against the original project:
@@ -283,16 +285,16 @@ EOF
 )"
 ```
 
-Clean up after: `rm -rf /tmp/desloppify-fix`
+After the PR merges, remove the worktree with `git -C "$DESLOPPIFY_REPO" worktree remove "$DESLOPPIFY_WORKTREE"`.
 
 ### File an issue (fallback)
 
-If the fix is unclear or the change needs discussion, open an issue at `https://github.com/peteromallet/desloppify/issues` with a minimal repro: command, path, expected output, actual output.
+If the fix is unclear or the change needs discussion, open an issue at `https://github.com/Rokurolize/desloppify/issues` with a minimal repro: command, path, expected output, actual output.
 
 ## Prerequisite
 
-`command -v desloppify >/dev/null 2>&1 && echo "desloppify: installed" || echo "NOT INSTALLED — run: uvx --from git+https://github.com/peteromallet/desloppify.git desloppify"`
+The expected checkout is `${DESLOPPIFY_REPO:-$HOME/src/Rokurolize/desloppify}`. Check the launcher with `command -v desloppify`.
 
-If `uvx` is not available: `pip install desloppify[full] && desloppify setup`
+If the launcher or environment is missing or stale, repair it with `uv tool install --editable --force "${DESLOPPIFY_REPO:-$HOME/src/Rokurolize/desloppify}[full]"`. Do not install `desloppify` from PyPI.
 
 <!-- desloppify-end -->

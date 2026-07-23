@@ -189,13 +189,12 @@ class TestCmdUpdateSkill:
 class TestUpdateInstalledSkill:
     @patch("desloppify.app.commands.update_skill.colorize", side_effect=lambda t, _c: t)
     @patch("desloppify.app.commands.update_skill._download")
-    def test_download_failure(self, mock_download, _mock_colorize, capsys):
-        import urllib.error
-        mock_download.side_effect = urllib.error.URLError("no network")
+    def test_bundled_read_failure(self, mock_read, _mock_colorize, capsys):
+        mock_read.side_effect = FileNotFoundError("resource unavailable")
         result = update_installed_skill("claude")
         assert result is False
         out = capsys.readouterr().out
-        assert "Download failed" in out
+        assert "Bundled skill document unavailable" in out
 
     @patch("desloppify.app.commands.update_skill.colorize", side_effect=lambda t, _c: t)
     @patch("desloppify.app.commands.update_skill._download")
